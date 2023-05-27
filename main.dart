@@ -20,28 +20,51 @@ class WeatherHome extends StatefulWidget {
 }
 
 class _WeatherHomeState extends State<WeatherHome> {
-  String _city = "Miami";
-  double? _temperature;
   final TextEditingController _cityController = TextEditingController();
+  List<String> _cities = [];
+  Map<String, double?> _temperatures = {}; // modify this to allow null values
+  String api_key = '1a05c19d399c1aa91a7f1150ef6d6f99';
+  List<String> _suggestedCities = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchWeather();
+  List<String> cityList = [
+    'New York',
+    'Los Angeles',
+    'Chicago',
+    'Houston',
+    'Phoenix',
+    'Philadelphia',
+    'San Antonio',
+    'San Diego',
+    'Dallas',
+    'San Jose',
+  ];
+
+  Future<void> _fetchWeather(String city) async {
+    try {
+      final response = await http.get(Uri.parse(
+          'http://api.openweathermap.org/data/2.5/weather?q=$city&appid=$api_key&units=imperial'));
+
+      if (response.statusCode == 200) {
+        var result = jsonDecode(response.body);
+        setState(() {
+          _temperatures[city] = result['main']['temp'];
+        });
+      } else {
+        throw Exception('Failed to load weather data');
+      }
+    } catch (e) {
+      setState(() {
+        _temperatures[city] = null; // Indicates that an error occurred.
+      });
+    }
   }
 
-  Future<void> _fetchWeather() async {
-    final response = await http.get(Uri.parse(
-        'http://api.openweathermap.org/data/2.5/weather?q=$_city&appid=1a05c19d399c1aa91a7f1150ef6d6f99&units=imperial'));
-
-    if (response.statusCode == 200) {
-      var result = jsonDecode(response.body);
-      setState(() {
-        _temperature = result['main']['temp'];
-      });
-    } else {
-      throw Exception('Failed to load weather data');
-    }
+  void _updateSuggestions(String query) {
+    setState(() {
+      _suggestedCities = cityList
+          .where((city) => city.toLowerCase().startsWith(query.toLowerCase()))
+          .toList();
+    });
   }
 
   @override
@@ -50,32 +73,54 @@ class _WeatherHomeState extends State<WeatherHome> {
       appBar: AppBar(
         title: Text('Weather App'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'Current weather in $_city:',
-            ),
-            Text(
-              '${_temperature != null ? _temperature!.toStringAsFixed(2) : "..."}°F',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-            TextField(
-              controller: _cityController,
-              decoration: InputDecoration(labelText: "Enter city name"),
-            ),
-            ElevatedButton(
-              onPressed: () {
+      body: Column(
+        children: <Widget>[
+          TextField(
+            controller: _cityController,
+            decoration: InputDecoration(labelText: "Enter city name"),
+            onChanged: _updateSuggestions,
+          ),
+          ..._suggestedCities.map(
+            (city) => ListTile(
+              title: Text(city),
+              onTap: () {
                 setState(() {
-                  _city = _cityController.text;
-                  _fetchWeather();
+                  _cities.add(city);
+                  _cityController.text = city;
+                  _suggestedCities.clear();
+                  _fetchWeather(city);
                 });
               },
-              child: Text("Get Weather"),
-            )
-          ],
-        ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              String city = _cityController.text;
+              setState(() {
+                if (!_cities.contains(city)) {
+                  _cities.add(city);
+                  _fetchWeather(city);
+                }
+                _cityController.clear();
+              });
+            },
+            child: Text("Add City"),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _cities.length,
+              itemBuilder: (BuildContext context, int index) {
+                String city = _cities[index];
+                return ListTile(
+                  title: Text(city),
+                  subtitle: Text(_temperatures[city] == null
+                      ? 'Could not load weather data'
+                      : '${_temperatures[city]!.toStringAsFixed(2)}°F'),
+                );
+              },
+            ),
+          )
+        ],
       ),
     );
   }
