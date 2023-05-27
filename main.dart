@@ -23,6 +23,7 @@ class _WeatherHomeState extends State<WeatherHome> {
   final TextEditingController _cityController = TextEditingController();
   List<String> _cities = [];
   Map<String, double?> _temperatures = {}; // modify this to allow null values
+  Map<String, String> _conditions = {};
   String api_key = '1a05c19d399c1aa91a7f1150ef6d6f99';
   List<String> _suggestedCities = [];
 
@@ -48,6 +49,7 @@ class _WeatherHomeState extends State<WeatherHome> {
         var result = jsonDecode(response.body);
         setState(() {
           _temperatures[city] = result['main']['temp'];
+          _conditions[city] = result['weather'][0]['description'];
         });
       } else {
         throw Exception('Failed to load weather data');
@@ -55,6 +57,7 @@ class _WeatherHomeState extends State<WeatherHome> {
     } catch (e) {
       setState(() {
         _temperatures[city] = null; // Indicates that an error occurred.
+        _conditions[city] = 'Could not load weather data';
       });
     }
   }
@@ -115,7 +118,17 @@ class _WeatherHomeState extends State<WeatherHome> {
                   title: Text(city),
                   subtitle: Text(_temperatures[city] == null
                       ? 'Could not load weather data'
-                      : '${_temperatures[city]!.toStringAsFixed(2)}°F'),
+                      : '${_temperatures[city]!.toStringAsFixed(2)}°F, ${_conditions[city]}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () {
+                      setState(() {
+                        _cities.removeAt(index);
+                        _temperatures.remove(city);
+                        _conditions.remove(city);
+                      });
+                    },
+                  ),
                 );
               },
             ),
