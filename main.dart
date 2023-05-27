@@ -24,7 +24,7 @@ class _WeatherHomeState extends State<WeatherHome> {
   List<String> _cities = [];
   Map<String, double?> _temperatures = {}; // modify this to allow null values
   Map<String, String> _conditions = {};
-  String api_key = '1a05c19d399c1aa91a7f1150ef6d6f99';
+  String api_key = 'Your API Key';
   List<String> _suggestedCities = [];
 
   List<String> cityList = [
